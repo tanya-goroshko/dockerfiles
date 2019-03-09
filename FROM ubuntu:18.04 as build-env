@@ -1,0 +1,35 @@
+FROM ubuntu:18.04 as build-env
+
+RUN apt-get update && \
+	apt-get install -y wget libcurl4-gnutls-dev libxml2-dev libpcre3-dev libbz2-dev \
+				libjpeg-dev libpng-dev libxpm-dev libfreetype6-dev t1utils libgd-dev \
+				libgmp-dev libmysqlclient-dev libmhash-dev unixodbc-dev freetds-dev \
+				libpspell-dev libsnmp-dev libtidy-dev libxslt1-dev libmcrypt-dev \
+				libicu-dev build-essential libldb-dev && \
+	wget -qO- http://de2.php.net/get/php-7.1.14.tar.bz2/from/this/mirror | tar xjf -
+
+WORKDIR /php-7.1.14
+RUN ./configure --prefix=/opt/php-7.1 --with-config-file-path=/etc/php7.1/cli \
+		--with-config-file-scan-dir=/etc/php7.1/cli/conf.d --with-bz2 --with-gettext \
+		--with-gmp=/usr/include/x86_64-linux-gnu --with-iconv --with-pcre-regex \
+		--with-zlib --enable-gd-native-ttf --enable-exif --enable-ftp --enable-sockets \
+		--enable-sysvsem --enable-sysvshm --enable-sysvmsg --enable-shmop --enable-pcntl \
+		--enable-calendar --enable-fpm --enable-mbstring --enable-opcache --enable-soap \
+		--enable-zip --with-curl --with-openssl --with-xmlrpc --with-gd --with-jpeg-dir \
+		--with-png-dir --with-mysqli=mysqlnd --with-pdo-mysql=mysqlnd --with-freetype-dir \
+		--with-xsl --with-pic --with-mcrypt --with-libdir=/usr/lib/x86_64-linux-gnu && \
+	make -j5 all test && \
+	make install
+
+FROM ubuntu:18.04 as prod-env
+
+COPY --from=build-env /opt/php-7.1 /opt/php-7.1
+RUN apt-get update && \
+	apt-get install -y libcurl4-gnutls-dev libxml2-dev libpcre3-dev libbz2-dev \
+				libjpeg-dev libpng-dev libxpm-dev libfreetype6-dev t1utils libgd-dev \
+				libgmp-dev libmysqlclient-dev libmhash-dev unixodbc-dev freetds-dev \
+				libpspell-dev libsnmp-dev libtidy-dev libxslt1-dev libmcrypt-dev \
+				libicu-dev libldb-dev
+
+ENV PATH=$PATH:/opt/php-7.1/bin
+RUN php --version
